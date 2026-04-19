@@ -86,8 +86,8 @@
                         Eisenhower Matrix
                     </h1>
                 </div>
-                <div id="status-badge" class="hidden sm:block text-[10px] text-green-600 font-bold bg-green-50 px-2 py-0.5 rounded border border-green-100 uppercase tracking-wider self-start sm:self-center">
-                    Local Session
+                <div id="status-badge" class="hidden sm:block text-[10px] text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100 uppercase tracking-wider self-start sm:self-center">
+                    Saved to Browser
                 </div>
             </div>
         </header>
@@ -191,6 +191,7 @@
     <!-- App Logic -->
     <script>
         // --- State Management ---
+        const STORAGE_KEY = 'eisenhower_tasks';
         let tasks = [];
 
         const quadrantColors = {
@@ -202,9 +203,30 @@
 
         // Initialize App
         window.onload = () => {
+            loadTasks();
             lucide.createIcons();
             renderTasks();
         };
+
+        // Load from localStorage
+        function loadTasks() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                tasks = saved ? JSON.parse(saved) : [];
+            } catch (e) {
+                console.error("Error loading tasks:", e);
+                tasks = [];
+            }
+        }
+
+        // Save to localStorage
+        function saveTasks() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+            } catch (e) {
+                console.error("Error saving tasks:", e);
+            }
+        }
 
         // --- Core Functions ---
 
@@ -260,12 +282,14 @@
             };
 
             tasks.push(newTask);
+            saveTasks();
             input.value = '';
             renderTasks();
         };
 
         window.deleteTask = (taskId) => {
             tasks = tasks.filter(t => t.id !== taskId);
+            saveTasks();
             renderTasks();
         };
 
@@ -273,6 +297,7 @@
             const task = tasks.find(t => t.id === taskId);
             if (task) {
                 task.quadrantId = newQuadrantId;
+                saveTasks();
                 renderTasks();
             }
         };
