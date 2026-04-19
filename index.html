@@ -11,6 +11,7 @@
         html, body {
             height: 100%;
             overflow: hidden;
+            overscroll-behavior: none;
         }
         
         /* Layout structure */
@@ -47,7 +48,7 @@
         .quadrant {
             display: flex;
             flex-direction: column;
-            min-height: 0; /* Important for flex child scrolling */
+            min-height: 0;
         }
 
         .task-list {
@@ -72,6 +73,14 @@
             background: rgba(0,0,0,0.1);
             border-radius: 10px;
         }
+
+        .saving-indicator {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .5; }
+        }
     </style>
 </head>
 <body class="bg-gray-50 font-sans text-gray-900">
@@ -80,14 +89,19 @@
         <!-- Header -->
         <header class="bg-white border-b border-gray-200 px-6 py-3 z-10 shadow-sm flex-shrink-0">
             <div class="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div>
+                <div class="flex items-center gap-4">
                     <h1 class="text-xl font-black text-gray-900 tracking-tight flex items-center gap-2">
                         <i data-lucide="arrow-right-left" class="text-blue-600 w-5 h-5"></i>
                         Eisenhower Matrix
                     </h1>
+                    <div id="status-badge" class="text-[10px] text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100 uppercase tracking-wider">
+                        Syncing...
+                    </div>
                 </div>
-                <div id="status-badge" class="hidden sm:block text-[10px] text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100 uppercase tracking-wider self-start sm:self-center">
-                    Saved to Browser
+                <div class="flex items-center gap-2">
+                    <button onclick="exportData()" class="text-[10px] uppercase font-bold text-gray-500 hover:text-gray-800 transition-colors">Backup</button>
+                    <span class="text-gray-300">|</span>
+                    <button onclick="importData()" class="text-[10px] uppercase font-bold text-gray-500 hover:text-gray-800 transition-colors">Restore</button>
                 </div>
             </div>
         </header>
@@ -191,7 +205,7 @@
     <!-- App Logic -->
     <script>
         // --- State Management ---
-        const STORAGE_KEY = 'eisenhower_tasks';
+        const STORAGE_KEY = 'eisenhower_matrix_persistent_v3';
         let tasks = [];
 
         const quadrantColors = {
@@ -206,16 +220,29 @@
             loadTasks();
             lucide.createIcons();
             renderTasks();
+            updateStatus('Saved');
         };
+
+        function updateStatus(text, error = false) {
+            const badge = document.getElementById('status-badge');
+            badge.innerText = text;
+            if (error) {
+                badge.className = "text-[10px] text-red-600 font-bold bg-red-50 px-2 py-0.5 rounded border border-red-100 uppercase tracking-wider";
+            } else {
+                badge.className = "text-[10px] text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100 uppercase tracking-wider";
+            }
+        }
 
         // Load from localStorage
         function loadTasks() {
             try {
                 const saved = localStorage.getItem(STORAGE_KEY);
-                tasks = saved ? JSON.parse(saved) : [];
+                if (saved) {
+                    tasks = JSON.parse(saved);
+                }
             } catch (e) {
-                console.error("Error loading tasks:", e);
-                tasks = [];
+                console.error("Storage Error:", e);
+                updateStatus('Storage Error', true);
             }
         }
 
@@ -223,8 +250,10 @@
         function saveTasks() {
             try {
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+                updateStatus('Saved');
             } catch (e) {
-                console.error("Error saving tasks:", e);
+                updateStatus('Save Failed', true);
+                console.error("Save Error:", e);
             }
         }
 
@@ -275,7 +304,7 @@
             if (!text) return;
 
             const newTask = {
-                id: crypto.randomUUID(),
+                id: Math.random().toString(36).substr(2, 9),
                 text,
                 quadrantId,
                 createdAt: Date.now()
@@ -302,8 +331,42 @@
             }
         };
 
-        // --- Drag and Drop Logic ---
+        // --- Backup & Restore ---
+        window.exportData = () => {
+            const data = JSON.stringify(tasks);
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `eisenhower-matrix-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+        };
 
+        window.importData = () => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const imported = JSON.parse(event.target.result);
+                        if (Array.isArray(imported)) {
+                            tasks = imported;
+                            saveTasks();
+                            renderTasks();
+                        }
+                    } catch (err) {
+                        alert("Invalid file format");
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        };
+
+        // --- Drag and Drop ---
         window.handleDragStart = (e, taskId) => {
             e.dataTransfer.setData('text/plain', taskId);
             setTimeout(() => {
