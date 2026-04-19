@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eisenhower Matrix</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Fill viewport and prevent body scroll */
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        /* Layout structure */
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .main-content {
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Responsive Grid height adjustment */
+        .matrix-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            grid-template-rows: repeat(4, minmax(0, 1fr));
+            gap: 1rem;
+            flex: 1;
+            padding: 1rem;
+        }
+
+        @media (min-width: 768px) {
+            .matrix-grid {
+                grid-template-columns: 1fr 1fr;
+                grid-template-rows: 1fr 1fr;
+            }
+        }
+
+        .quadrant {
+            display: flex;
+            flex-direction: column;
+            min-height: 0; /* Important for flex child scrolling */
+        }
+
+        .task-list {
+            flex: 1;
+            overflow-y: auto;
+            min-height: 0;
+        }
+
+        .drag-over {
+            border-style: dashed !important;
+            opacity: 0.7;
+        }
+
+        /* Custom scrollbar for task lists */
+        .task-list::-webkit-scrollbar {
+            width: 4px;
+        }
+        .task-list::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .task-list::-webkit-scrollbar-thumb {
+            background: rgba(0,0,0,0.1);
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans text-gray-900">
+
+    <div class="app-container">
+        <!-- Header -->
+        <header class="bg-white border-b border-gray-200 px-6 py-3 z-10 shadow-sm flex-shrink-0">
+            <div class="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                    <h1 class="text-xl font-black text-gray-900 tracking-tight flex items-center gap-2">
+                        <i data-lucide="arrow-right-left" class="text-blue-600 w-5 h-5"></i>
+                        Eisenhower Matrix
+                    </h1>
+                </div>
+                <div id="status-badge" class="hidden sm:block text-[10px] text-green-600 font-bold bg-green-50 px-2 py-0.5 rounded border border-green-100 uppercase tracking-wider self-start sm:self-center">
+                    Local Session
+                </div>
+            </div>
+        </header>
+
+        <!-- Matrix Grid -->
+        <main class="main-content">
+            <div class="matrix-grid max-w-7xl mx-auto w-full">
+                
+                <!-- Q1: Do First -->
+                <div id="q1" class="quadrant rounded-xl border-2 bg-rose-50 border-rose-200 transition-all duration-200" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'q1')">
+                    <div class="p-3 bg-rose-100/50 border-b border-rose-200 rounded-t-lg flex-shrink-0">
+                        <div class="flex items-center justify-between mb-0.5">
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="alert-circle" class="text-rose-800 w-4 h-4"></i>
+                                <h2 class="font-bold text-xs tracking-tight uppercase text-rose-800">Do First</h2>
+                            </div>
+                            <span id="count-q1" class="task-count text-[10px] font-semibold px-2 py-0.5 bg-white/50 rounded-full text-gray-600">0</span>
+                        </div>
+                    </div>
+                    <div class="task-list p-2"></div>
+                    <div class="p-2 pt-0 flex-shrink-0">
+                        <form onsubmit="handleAddTask(event, 'q1')" class="relative">
+                            <input type="text" placeholder="Add task..." class="w-full pl-3 pr-8 py-1.5 text-xs rounded-lg border border-rose-200 bg-white/70 focus:outline-none focus:ring-2 focus:ring-rose-200 shadow-sm transition-all">
+                            <button type="submit" class="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-rose-800 hover:bg-rose-100 rounded-md">
+                                <i data-lucide="plus" class="w-4 h-4"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Q2: Schedule -->
+                <div id="q2" class="quadrant rounded-xl border-2 bg-sky-50 border-sky-200 transition-all duration-200" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'q2')">
+                    <div class="p-3 bg-sky-100/50 border-b border-sky-200 rounded-t-lg flex-shrink-0">
+                        <div class="flex items-center justify-between mb-0.5">
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="calendar" class="text-sky-800 w-4 h-4"></i>
+                                <h2 class="font-bold text-xs tracking-tight uppercase text-sky-800">Schedule</h2>
+                            </div>
+                            <span id="count-q2" class="task-count text-[10px] font-semibold px-2 py-0.5 bg-white/50 rounded-full text-gray-600">0</span>
+                        </div>
+                    </div>
+                    <div class="task-list p-2"></div>
+                    <div class="p-2 pt-0 flex-shrink-0">
+                        <form onsubmit="handleAddTask(event, 'q2')" class="relative">
+                            <input type="text" placeholder="Add task..." class="w-full pl-3 pr-8 py-1.5 text-xs rounded-lg border border-sky-200 bg-white/70 focus:outline-none focus:ring-2 focus:ring-sky-200 shadow-sm transition-all">
+                            <button type="submit" class="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-sky-800 hover:bg-sky-100 rounded-md">
+                                <i data-lucide="plus" class="w-4 h-4"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Q3: Delegate -->
+                <div id="q3" class="quadrant rounded-xl border-2 bg-amber-50 border-amber-200 transition-all duration-200" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'q3')">
+                    <div class="p-3 bg-amber-100/50 border-b border-amber-200 rounded-t-lg flex-shrink-0">
+                        <div class="flex items-center justify-between mb-0.5">
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="users" class="text-amber-800 w-4 h-4"></i>
+                                <h2 class="font-bold text-xs tracking-tight uppercase text-amber-800">Delegate</h2>
+                            </div>
+                            <span id="count-q3" class="task-count text-[10px] font-semibold px-2 py-0.5 bg-white/50 rounded-full text-gray-600">0</span>
+                        </div>
+                    </div>
+                    <div class="task-list p-2"></div>
+                    <div class="p-2 pt-0 flex-shrink-0">
+                        <form onsubmit="handleAddTask(event, 'q3')" class="relative">
+                            <input type="text" placeholder="Add task..." class="w-full pl-3 pr-8 py-1.5 text-xs rounded-lg border border-amber-200 bg-white/70 focus:outline-none focus:ring-2 focus:ring-amber-200 shadow-sm transition-all">
+                            <button type="submit" class="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-amber-800 hover:bg-amber-100 rounded-md">
+                                <i data-lucide="plus" class="w-4 h-4"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Q4: Delete -->
+                <div id="q4" class="quadrant rounded-xl border-2 bg-slate-100 border-slate-300 transition-all duration-200" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'q4')">
+                    <div class="p-3 bg-slate-200/50 border-b border-slate-300 rounded-t-lg flex-shrink-0">
+                        <div class="flex items-center justify-between mb-0.5">
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="x-circle" class="text-slate-800 w-4 h-4"></i>
+                                <h2 class="font-bold text-xs tracking-tight uppercase text-slate-800">Delete</h2>
+                            </div>
+                            <span id="count-q4" class="task-count text-[10px] font-semibold px-2 py-0.5 bg-white/50 rounded-full text-gray-600">0</span>
+                        </div>
+                    </div>
+                    <div class="task-list p-2"></div>
+                    <div class="p-2 pt-0 flex-shrink-0">
+                        <form onsubmit="handleAddTask(event, 'q4')" class="relative">
+                            <input type="text" placeholder="Add task..." class="w-full pl-3 pr-8 py-1.5 text-xs rounded-lg border border-slate-300 bg-white/70 focus:outline-none focus:ring-2 focus:ring-slate-300 shadow-sm transition-all">
+                            <button type="submit" class="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-slate-800 hover:bg-slate-200 rounded-md">
+                                <i data-lucide="plus" class="w-4 h-4"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- App Logic -->
+    <script>
+        // --- State Management ---
+        let tasks = [];
+
+        const quadrantColors = {
+            q1: 'bg-rose-500',
+            q2: 'bg-sky-500',
+            q3: 'bg-amber-500',
+            q4: 'bg-slate-500'
+        };
+
+        // Initialize App
+        window.onload = () => {
+            lucide.createIcons();
+            renderTasks();
+        };
+
+        // --- Core Functions ---
+
+        function renderTasks() {
+            const grouped = { q1: [], q2: [], q3: [], q4: [] };
+            tasks.forEach(task => {
+                if (grouped[task.quadrantId]) grouped[task.quadrantId].push(task);
+            });
+
+            Object.keys(grouped).forEach(qId => {
+                const container = document.querySelector(`#${qId} .task-list`);
+                const countBadge = document.getElementById(`count-${qId}`);
+                
+                countBadge.innerText = grouped[qId].length;
+                
+                if (grouped[qId].length === 0) {
+                    container.innerHTML = `<div class="h-full flex items-center justify-center text-[10px] text-gray-400 italic opacity-70">No tasks</div>`;
+                } else {
+                    const sorted = grouped[qId].sort((a, b) => a.createdAt - b.createdAt);
+                    container.innerHTML = sorted.map(task => `
+                        <div draggable="true" 
+                             id="task-${task.id}"
+                             ondragstart="handleDragStart(event, '${task.id}')"
+                             class="group bg-white rounded-lg shadow-sm border border-gray-100 p-2 mb-1.5 flex items-center justify-between gap-2 cursor-grab active:cursor-grabbing hover:shadow transition-all relative overflow-hidden">
+                            <div class="absolute left-0 top-0 bottom-0 w-1 ${quadrantColors[qId]}"></div>
+                            <div class="flex items-center gap-2 flex-1 min-w-0 pl-1">
+                                <span class="text-gray-800 truncate text-[11px] font-medium leading-tight">${task.text}</span>
+                            </div>
+                            <div class="flex items-center gap-1 flex-shrink-0">
+                                <button onclick="window.deleteTask('${task.id}')" class="text-gray-300 hover:text-red-500 p-0.5 rounded transition-colors">
+                                    <i data-lucide="trash-2" class="w-3 h-3"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            });
+            
+            lucide.createIcons();
+        }
+
+        window.handleAddTask = (e, quadrantId) => {
+            e.preventDefault();
+            const input = e.target.querySelector('input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            const newTask = {
+                id: crypto.randomUUID(),
+                text,
+                quadrantId,
+                createdAt: Date.now()
+            };
+
+            tasks.push(newTask);
+            input.value = '';
+            renderTasks();
+        };
+
+        window.deleteTask = (taskId) => {
+            tasks = tasks.filter(t => t.id !== taskId);
+            renderTasks();
+        };
+
+        window.moveTask = (taskId, newQuadrantId) => {
+            const task = tasks.find(t => t.id === taskId);
+            if (task) {
+                task.quadrantId = newQuadrantId;
+                renderTasks();
+            }
+        };
+
+        // --- Drag and Drop Logic ---
+
+        window.handleDragStart = (e, taskId) => {
+            e.dataTransfer.setData('text/plain', taskId);
+            setTimeout(() => {
+                const el = document.getElementById(`task-${taskId}`);
+                if (el) el.classList.add('opacity-40');
+            }, 0);
+        };
+
+        window.handleDragOver = (e) => {
+            e.preventDefault();
+            e.currentTarget.classList.add('drag-over', 'ring-2', 'ring-blue-100');
+        };
+
+        window.handleDragLeave = (e) => {
+            e.currentTarget.classList.remove('drag-over', 'ring-2', 'ring-blue-100');
+        };
+
+        window.handleDrop = (e, quadrantId) => {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over', 'ring-2', 'ring-blue-100');
+            const taskId = e.dataTransfer.getData('text/plain');
+            if (taskId) {
+                window.moveTask(taskId, quadrantId);
+            }
+        };
+    </script>
+</body>
+</html>
